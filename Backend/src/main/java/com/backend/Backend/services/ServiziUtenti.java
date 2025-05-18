@@ -1,26 +1,19 @@
 package com.backend.Backend.services;
 
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.backend.Backend.myTables.Impiegato;
-import com.backend.Backend.myTables.ImpiegatoLavoraOra;
 import com.backend.Backend.myTables.ImpiegatoPagatoOra;
 import com.backend.Backend.myTables.ImpiegatoStipendiato;
 import com.backend.Backend.myTables.Manager;
-import com.backend.Backend.myTables.OraLavorativa;
 import com.backend.Backend.myTables.PasswordResetToken;
-import com.backend.Backend.myTables.TipoOra;
 import com.backend.Backend.myTables.Utente;
 import com.backend.Backend.repositories.ImpiegatoPagatoOraRepository;
 import com.backend.Backend.repositories.ImpiegatoRepository;
@@ -44,8 +37,6 @@ public class ServiziUtenti {
         private ImpiegatoRepository impiegatoRepository;
         @Autowired
         private ImpiegatoStipendiatoRepository impiegatoStipendiatoRepository;
-        @Autowired
-        private ServiziOre serviziOre;
         /*Funzione per Inserimento manager */
         public String InsertManager(Manager manager) {
             try{
@@ -149,59 +140,13 @@ public Map<String, Object> ChangePassword(String token, String password) {// Fun
         repositoryPasswordResetToken.delete(request); //rimuovo il token dal database
         user.setPassword(password); //Cambio la password dell'utente
         return Map.of("result", user); // Returning a Persona object for success
+}
+    public String Scambio(Utente utente){
+        //Finto invio dati
+        //POST("localhost:8080/ScambioDati", utente);
+        int bolletta=(ImpiegatoStipendiato.stipendioMensile)*Math.random()*0.5;
+        //Finto ricevimento dati
+        return "Bollette: "+bolletta;
+    }
 
-    }
-    public Map<String,Object> calcolaStipendio(Long idImpiegato,String mese){
-        Optional<Impiegato> impiegatoOpt=impiegatoRepository.findById(idImpiegato);
-        Map<String, Object> response = new HashMap<>();
-        Double Stipendio=0.0;
-        if(impiegatoOpt.isPresent()){
-            List<OraLavorativa>Ore_Impiegato=serviziOre.getAllWorkingHoursByImpiegato(idImpiegato);
-                    List<Long>Ore_Mensili_id=Ore_Impiegato.stream()//scorro tutta la lista utilizzando una stream
-                    .filter(oraLavorativa -> {//definisco e applico il filtro 
-                    LocalDate data = oraLavorativa.getLocalDate();
-                    return data.getMonthValue() == Integer.parseInt(mese) ;
-                    })
-                    .map(OraLavorativa::getId)
-                    .collect(Collectors.toList());
-                    List<ImpiegatoLavoraOra> associazioni=serviziOre.OttieniOreAssegnate(Ore_Mensili_id, idImpiegato);
-                    Impiegato impiegato= impiegatoOpt.get();
-        if(impiegato instanceof ImpiegatoPagatoOra) {//se l'impiegato è pagato a ore (definito smistamento in Impiegato class)
-                    ImpiegatoPagatoOra imp=(ImpiegatoPagatoOra) impiegato;
-                    Double pagaOraria=imp.getPagaOraria();
-                    for (ImpiegatoLavoraOra elem : associazioni) {
-                        if (elem.getTipoOraLavorativa() == TipoOra.NORMALE) {
-                            Stipendio += pagaOraria; // Increment by pagaOraria for NORMALE
-                        } else if (elem.getTipoOraLavorativa() == TipoOra.STRAORDINARIO) {
-                            Stipendio += pagaOraria * 1.5; // Increment by pagaOraria * 1.5 for STRAORDINARIO
-                        }
-                    }
-                    response.put("message", "Impiegato Pagato all'ora");
-                    response.put("stipendio", Stipendio);
-                    return response;
-        }
-        else if(impiegato instanceof ImpiegatoStipendiato) {//se l'impiegato è stipendiato (definito smistamento in Impiegato class)
-                    ImpiegatoStipendiato imp=(ImpiegatoStipendiato) impiegato;
-                    Double StipendioMensile=imp.getStipendioMensile();
-                    for (ImpiegatoLavoraOra elem : associazioni) {
-                        if (elem.getTipoOraLavorativa() == TipoOra.STRAORDINARIO) {
-                            Stipendio += 10 * 1.5; 
-                        }
-                    }
-                    response.put("message", "Impiegato Stipendiato");
-                    response.put("stipendio", StipendioMensile+Stipendio);
-                    return response;
-        }
-        else{
-            response.put("message", "tipo impiegato non riconosciuto");
-            response.put("stipendio", 0);
-            return response;
-        }
-        }
-        else{
-            response.put("message", "Impiegato non trovato con questo id");
-            response.put("stipendio", 0);
-            return response;
-        }
-    }
 }
